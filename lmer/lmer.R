@@ -1,4 +1,4 @@
-x <- list('magrittr','ggplot2','dplyr','readxl','arrow','tidyverse','qdap','rdrr','writexl','stringr',
+x <- list('magrittr','ggplot2','dplyr','readxl','arrow','tidyverse','qdap','sandwich','writexl','stringr','lmtest','margins','effects','MuMIn',
           'lme4','lmtest', 'scales','gridExtra')
 lapply(x, FUN = function(X) {
   do.call("require", list(X))
@@ -209,22 +209,60 @@ did_main <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Tota
                    Percent.below.poverty.level + (1 | City) +
                    year*citylicense + year*pharmacyban, data = density_mergefee)
 summary(did_main)
+
+summary_main <- summary(did_main)
+fe_summary <- summary_main$coefficients
+fe_df <- as.data.frame(fe_summary)
+write.csv(fe_df, "FixedEffectsSummary.csv", row.names = TRUE)
+
 coef_table(did_main)
 write.csv(coef_table(did_main), file = paste0(path, "main__.csv"))
+# Perform the Adjusted Wald test
+adjusted_wald_test <- coeftest(did_main, vcov. = vcovHC(did_main))
+print(adjusted_wald_test)
 
+wald_test <- anova(did_main)
+print(wald_test)
 
+model <- glm(dependent_variable ~ predictors, data = your_data, family = binomial())
+ame <- margins(model)
+summary(ame)
+
+plot(allEffects(did_main))
+
+# Calculate R^2 for mixed models
+r.squaredGLMM(did_main)
+
+plot(effect("year:citylicense", did_main, given=list(City="SpecificCity")))
+
+# Reduced model without interactions
+did_main_reduced <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
+                           Bachelor_higher_1824 + Bachelor_higher_25 + 
+                           Percent.below.poverty.level + (1 | City), data = density_mergefee)
+
+# Compare models using anova (Likelihood Ratio Test, which is similar to Wald Test in this context)
+anova(did_main_reduced, did_main)
+
+# Perform the Wald test
+waldtest(did_main_reduced, did_main)
+
+# # List of main effects and their interactions
+# effects_list <- c("year", "citylicense", "pharmacyban", "Total_RacialMinority",
+#                   "year:citylicense", "year:pharmacyban")
+# # Plot effects for each variable and interaction
+# for (var in effects_list) {
+#   effect_plot <- effect(var, did_main)
+#   plot(effect_plot, main=paste("Effect of", var))
+# }
 
 # likelihood ratio test
-# model with only intercept, 
+# model with only intercept,
 # baseline model that assumes that the response variable has a constant value across all observations
 null_model <- lm(RetailerCount_density ~ 1, data = density_mergefee) 
 lrtest <- lrtest(null_model, did_main)
 # The test results indicate that Model 2 provides a significantly better fit to the data than Model 1
 # Model 2 has 9 additional degrees of freedom compared to Model 1.
 lrtest
-
-
-
 
 
 did_ethnicity <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
@@ -236,6 +274,9 @@ did_ethnicity <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban +
 summary(did_ethnicity)
 coef_table(did_ethnicity)
 write.csv(coef_table(did_ethnicity), file = paste0(path, "ethnicity__.csv"))
+# Perform the Adjusted Wald test
+adjusted_wald_test <- coeftest(did_ethnicity, vcov. = vcovHC(did_ethnicity))
+print(adjusted_wald_test)
 
 
 did_poverty <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
@@ -248,6 +289,9 @@ did_poverty <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + T
 summary(did_poverty)
 coef_table(did_poverty)
 write.csv(coef_table(did_poverty), file = paste0(path, "poverty__.csv"))
+# Perform the Adjusted Wald test
+adjusted_wald_test <- coeftest(did_poverty, vcov. = vcovHC(did_ethnicity))
+print(adjusted_wald_test)
 
 
 did_education <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
@@ -262,9 +306,9 @@ did_education <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban +
 summary(did_education)
 coef_table(did_education)
 write.csv(coef_table(did_education), file = paste0(path, "education__.csv"))
-
-
-
+# Perform the Adjusted Wald test
+adjusted_wald_test <- coeftest(did_education, vcov. = vcovHC(did_ethnicity))
+print(adjusted_wald_test)
 
 
 ###############################
