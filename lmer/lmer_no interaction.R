@@ -1,10 +1,11 @@
-x <- list('magrittr','ggplot2','dplyr','readxl','arrow','tidyverse','qdap','rdrr','writexl','stringr',
+x <- list('magrittr','ggplot2','dplyr','readxl','arrow','tidyverse','qdap','sandwich','writexl','stringr','lmtest','margins','effects','MuMIn',
           'lme4','lmtest', 'scales','gridExtra')
 lapply(x, FUN = function(X) {
   do.call("require", list(X))
 })
 
-# path <- 'D:\\Purdue\\research\\lmer\\'
+path <- 'D:\\Purdue\\research\\lmer\\'
+
 # density_mergefee <- read.csv(paste0(path, "density_mergefee_lmer_mile.csv"), skip = 0)
 # density_mergefee <- read_excel(paste0(path, "density_mergefee_lmer.xlsx"))
 # density_mergefee <- subset(density_mergefee, !is.na(AnnualFee) & AnnualFee != 0)
@@ -39,8 +40,7 @@ lapply(x, FUN = function(X) {
 # density_mergefee$RetailerYear <- as.factor(density_mergefee$RetailerYear)
 
 
-# density_mergefee <- read_excel("density_mergefee_lmer.xlsx")
-density_mergefee <- read.csv("density_mergefee_lmer_mile.csv")
+density_mergefee <- read_excel(paste0(path, "density_mergefee_lmer.xlsx"))
 for (col in colnames(density_mergefee)) {
   if (!col %in% c("City", "County", "citylicense")) {
     # Convert to numeric, handling factors and characters appropriately
@@ -60,7 +60,6 @@ unique(density_mergefee$EnactmentDate)
 
 # density_mergefee$RetailerCount_density <- density_mergefee$RetailerCount_density * 1000
 density_mergefee$year <- as.factor(ifelse(density_mergefee$RetailerYear >= 2017, 1, 0)) # year (before 2016: 0, after 2016: 1)
-density_mergefee <- subset(density_mergefee, year == "0")
 density_mergefee$City <- as.factor(density_mergefee$City)
 # density_mergefee$citylicense <- ifelse(density_mergefee$citylicense %in% c(0, 1), "weak",
 #                                        ifelse(density_mergefee$citylicense %in% c(2, 3), "moderate", "strong"))
@@ -89,79 +88,6 @@ density_mergefee$RetailerCount_density <- as.numeric(density_mergefee$RetailerCo
 summary(density_mergefee[,c(6,14,15,17,19,21,22,29)])
 
 my_data <- na.omit(density_mergefee[,c(14,15,17,19,21,22,29)])
-
-##########################################################
-result <- aggregate(Count ~ RetailerYear, data = density_mergefee, FUN = function(x) c(Sum = sum(x), Average = mean(x)))
-# Create a line chart for the sum values
-sum_plot <- ggplot(result, aes(x = RetailerYear)) +
-  geom_line(aes(y = result$Count[, 1], color = "Sum"), size = 1.5) +
-  geom_point(aes(y = result$Count[, 1], color = "Sum"), size = 3) +
-  labs(title = "Sum of Count by RetailerYear",
-       x = "RetailerYear", y = "Count") +
-  scale_color_manual(values = c(Sum = "#FF6F00")) +
-  theme_minimal()
-
-# Create a line chart for the average values
-avg_plot <- ggplot(result, aes(x = RetailerYear)) +
-  geom_line(aes(y = result$Count[, 2], color = "Average"), size = 1.5) +
-  geom_point(aes(y = result$Count[, 2], color = "Average"), size = 3) +
-  labs(title = "Average of Count by RetailerYear",
-       x = "RetailerYear", y = "Count") +
-  scale_color_manual(values = c(Average = "#2979FF")) +
-  theme_minimal()
-
-# Arrange the two plots side by side
-gridExtra::grid.arrange(sum_plot, avg_plot, ncol = 2)
-
-##########################################################
-
-# Create a bar chart for the sum values
-sum_plot <- ggplot(result, aes(x = RetailerYear, y = result$Count[, 1])) +
-  geom_bar(stat = "identity", fill = "#FF6F00") +
-  labs(title = "Sum of Count by RetailerYear",
-       x = "RetailerYear", y = "Count")
-
-# Create a bar chart for the average values
-avg_plot <- ggplot(result, aes(x = RetailerYear, y = result$Count[, 2])) +
-  geom_bar(stat = "identity", fill = "#2979FF") +
-  labs(title = "Average of Count by RetailerYear",
-       x = "RetailerYear", y = "Count")
-
-# Arrange the two bar charts side by side
-gridExtra::grid.arrange(sum_plot, avg_plot, ncol = 2)
-
-##########################################################
-counties <- unique(density_mergefee$County)
-graphs <- list()
-for (county in counties) {
-  county_data <- subset(density_mergefee, County == county)
-  avg_density <- county_data %>%
-    group_by(RetailerYear) %>%
-    summarize(avg_density = mean(RetailerCount_density))
-  
-  p <- ggplot(avg_density, aes(x = RetailerYear, y = avg_density)) +
-    geom_line() +
-    labs(title = county, x = "Retailer Year", y = "Average Density") +
-    theme_minimal()
-  graphs[[county]] <- p
-}
-print(graphs)
-
-# arrange graphs in grid and add title
-grid.arrange(grobs = graphs, ncol = 4, 
-             top = textGrob("Average Retailer Count Density by County and Retailer Year", gp = gpar(fontsize = 16)))
-
-#########################################################
-density_mergefee %>%
-  group_by(RetailerYear, citylicense) %>%
-  summarize(num_cities = n()) %>%
-  print(n = Inf)
-
-density_mergefee %>%
-  group_by(citylicense, RetailerYear) %>%
-  summarize(num_cities = n()) %>%
-  print(n = Inf)
-
 
 # # set 2016 as the reference
 # density_mergefee$RetailerYear <- density_mergefee$RetailerYear - 2016
@@ -216,15 +142,6 @@ density_mergefee %>%
 # whether you can reject the null hypothesis that all predictors are jointly zero
 # lm() in R performs t-tests to test for the significance of individual predictors. 
 # It does not perform an adjusted Wald test to test for the joint significance of all predictors.
-coefs <- summary(did_main)$coefficients[,1]
-se <- summary(did_main)$coefficients[,2]
-n <- nrow(density_mergefee)
-k <- length(coefs)
-adj_se <- se * sqrt(n/(n - k))
-test_stat <- coefs / adj_se
-pvalue <- pf(test_stat, df1 = k, df2 = n - k, lower.tail = FALSE)
-pvalue
-
 
 coef_table <- function(did_main){
   # Extract the fixed effects coefficients and their standard errors
@@ -281,113 +198,59 @@ coef_table <- function(did_main){
 # |t| > 3 indicates it is more strongly significant
 did_main <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
                    Bachelor_higher_1824 + Bachelor_higher_25 + 
-                   Percent.below.poverty.level + (1 | City) +
-                   year*citylicense + year*pharmacyban, data = density_mergefee)
+                   Percent.below.poverty.level + (1 | City), data = density_mergefee)
 summary(did_main)
+
+summary_main <- summary(did_main)
+fe_summary <- summary_main$coefficients
+fe_df <- as.data.frame(fe_summary)
+write.csv(fe_df, "FixedEffectsSummary.csv", row.names = TRUE)
+
 coef_table(did_main)
-write.csv(coef_table(did_main), file = paste0(path, "main__.csv"))
+write.csv(coef_table(did_main), file = paste0(path, "main_nointeraction__.csv"))
+# Perform the Adjusted Wald test
+adjusted_wald_test <- coeftest(did_main, vcov. = vcovHC(did_main))
+print(adjusted_wald_test)
+
+wald_test <- anova(did_main)
+print(wald_test)
+
+model <- glmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
+                 Bachelor_higher_1824 + Bachelor_higher_25 + 
+                 Percent.below.poverty.level + (1 | City), 
+               data = density_mergefee, family = quasibinomial())
+ame <- margins(model)
+summary(ame)
+
+# plot(allEffects(did_main))
+effects <- allEffects(did_main)
+plot(effects, select = 2)
+
+# Calculate R^2 for mixed models
+r.squaredGLMM(did_main)
+
+plot(effect("year:citylicense", did_main, given=list(City="SpecificCity")))
+
+
+# # List of main effects and their interactions
+# effects_list <- c("year", "citylicense", "pharmacyban", "Total_RacialMinority",
+#                   "year:citylicense", "year:pharmacyban")
+# # Plot effects for each variable and interaction
+# for (var in effects_list) {
+#   effect_plot <- effect(var, did_main)
+#   plot(effect_plot, main=paste("Effect of", var))
+# }
 
 # likelihood ratio test
-# model with only intercept, 
+# model with only intercept,
 # baseline model that assumes that the response variable has a constant value across all observations
+# Fit a null mixed-effects model with the same random effects structure
 null_model <- lm(RetailerCount_density ~ 1, data = density_mergefee) 
 lrtest <- lrtest(null_model, did_main)
 # The test results indicate that Model 2 provides a significantly better fit to the data than Model 1
 # Model 2 has 9 additional degrees of freedom compared to Model 1.
 lrtest
 
-
-
-
-
-did_ethnicity <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
-                   Bachelor_higher_1824 + Bachelor_higher_25 + 
-                   Percent.below.poverty.level + (1 | City) +
-                     year*citylicense + year*pharmacyban + year*Total_RacialMinority +
-                   citylicense*Total_RacialMinority + pharmacyban*Total_RacialMinority + 
-                     year*citylicense*Total_RacialMinority, data = density_mergefee)
-summary(did_ethnicity)
-coef_table(did_ethnicity)
-write.csv(coef_table(did_ethnicity), file = paste0(path, "ethnicity__.csv"))
-
-
-did_poverty <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
-                        Bachelor_higher_1824 + Bachelor_higher_25 + 
-                        Percent.below.poverty.level + (1 | City) +
-                       year*citylicense + year*pharmacyban +
-                        year*Percent.below.poverty.level +
-                        citylicense*Percent.below.poverty.level + pharmacyban*Percent.below.poverty.level + 
-                      year*Percent.below.poverty.level*citylicense + year*Percent.below.poverty.level*pharmacyban, data = density_mergefee)
-summary(did_poverty)
-coef_table(did_poverty)
-write.csv(coef_table(did_poverty), file = paste0(path, "poverty__.csv"))
-
-
-did_education <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
-                      Bachelor_higher_1824 + Bachelor_higher_25 + 
-                      Percent.below.poverty.level + (1 | City) +
-                        year*citylicense + year*pharmacyban +
-                      year*Bachelor_higher_1824 + year*Bachelor_higher_25 + 
-                      citylicense*Bachelor_higher_1824 + pharmacyban*Bachelor_higher_1824 + 
-                      citylicense*Bachelor_higher_25 + pharmacyban*Bachelor_higher_25 + 
-                        year*Bachelor_higher_1824*citylicense + year*Bachelor_higher_1824*pharmacyban +
-                        year*Bachelor_higher_25*citylicense + year*Bachelor_higher_25*pharmacyban, data = density_mergefee)
-summary(did_education)
-coef_table(did_education)
-write.csv(coef_table(did_education), file = paste0(path, "education__.csv"))
-
-
-
-
-
-###############################
-
-did_main <- lmer(RetailerCount_density ~ citylicense + pharmacyban + 
-                 Hispanic.or.Latino + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + 
-                 Native.Hawaiian.and.Other.Pacific.Islander + Some.Other.Race + Two.or.More.Races + 
-                 Bachelor_higher_1824 + Bachelor_higher_25 + 
-                 Percent.below.poverty.level + 
-                 (1 | City), data = density_mergefee)
-summary(did_main)
-
-
-did_ethnicity <- lm(RetailerCount_density ~ citylicense + pharmacyban + 
-                 Hispanic.or.Latino + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + 
-                 Native.Hawaiian.and.Other.Pacific.Islander + Some.Other.Race + Two.or.More.Races + 
-                 Bachelor_higher_1824 + Bachelor_higher_25 + 
-                 Percent.below.poverty.level + 
-                   citylicense*Hispanic.or.Latino + citylicense*Black.or.African.American + 
-                   citylicense*American.Indian.and.Alaska.Native + citylicense*Asian + 
-                   citylicense*Native.Hawaiian.and.Other.Pacific.Islander + citylicense*Some.Other.Race + 
-                   citylicense*Two.or.More.Races + 
-                   pharmacyban*Hispanic.or.Latino + pharmacyban*Black.or.African.American + 
-                   pharmacyban*American.Indian.and.Alaska.Native + pharmacyban*Asian + 
-                   pharmacyban*Native.Hawaiian.and.Other.Pacific.Islander + pharmacyban*Some.Other.Race + 
-                   pharmacyban*Two.or.More.Races + 
-                   citylicense*pharmacyban*Hispanic.or.Latino + citylicense*pharmacyban*Black.or.African.American + 
-                   citylicense*pharmacyban*American.Indian.and.Alaska.Native + citylicense*pharmacyban*Asian + 
-                   citylicense*pharmacyban*Native.Hawaiian.and.Other.Pacific.Islander + citylicense*pharmacyban*Some.Other.Race + 
-                   citylicense*pharmacyban*Two.or.More.Races, data = density_mergefee)
-summary(did_ethnicity)
-did_poverty <- lm(RetailerCount_density ~ citylicense + pharmacyban + 
-                 Hispanic.or.Latino + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + 
-                 Native.Hawaiian.and.Other.Pacific.Islander + Some.Other.Race + Two.or.More.Races + 
-                 Bachelor_higher_1824 + Bachelor_higher_25 + 
-                 Percent.below.poverty.level +
-                   citylicense*Percent.below.poverty.level + pharmacyban*Percent.below.poverty.level + 
-                   citylicense*pharmacyban*Percent.below.poverty.level, data = density_mergefee)
-summary(did_poverty)
-did_education <- lm(RetailerCount_density ~ citylicense + pharmacyban + 
-                 Hispanic.or.Latino + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + 
-                 Native.Hawaiian.and.Other.Pacific.Islander + Some.Other.Race + Two.or.More.Races + 
-                 Bachelor_higher_1824 + Bachelor_higher_25 + 
-                 Percent.below.poverty.level + 
-                   citylicense*Bachelor_higher_1824 + citylicense*Bachelor_higher_25 + 
-                   pharmacyban*Bachelor_higher_1824 + pharmacyban*Bachelor_higher_25 + 
-                   citylicense*pharmacyban*Bachelor_higher_1824 + citylicense*pharmacyban*Bachelor_higher_25 + 
-                   citylicense*Bachelor_higher_1824*Bachelor_higher_25 + pharmacyban*Bachelor_higher_1824*Bachelor_higher_25 +
-                   citylicense*pharmacyban*Bachelor_higher_1824*Bachelor_higher_25, data = density_mergefee)
-summary(did_education)
 
 
 
