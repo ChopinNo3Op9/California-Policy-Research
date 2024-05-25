@@ -5,7 +5,7 @@ lapply(x, FUN = function(X) {
 })
 
 
-density_mergefee <- read.csv("D:\\Purdue\\research\\sensitivity_analysis\\density_mergefee_mile.csv")
+density_mergefee <- read.csv("density_mergefee_mile.csv")
 # density_mergefee$RetailerCount_density <- density_mergefee$RetailerCount_density * 1000
 density_mergefee$year <- as.factor(ifelse(density_mergefee$RetailerYear >= 2016, 1, 0)) # year (before 2016: 0, after 2016: 1)
 density_mergefee$City <- as.factor(density_mergefee$City)
@@ -27,5 +27,5 @@ density_mergefee$EnactmentYear[non_empty_dates] <- as.character(year)
 density_mergefee$EnactmentYear <- as.integer(density_mergefee$EnactmentYear)
 density_mergefee$AnnualFee <- ifelse(density_mergefee$EnactmentYear > density_mergefee$RetailerYear, 0, density_mergefee$AnnualFee)
 density_mergefee$RetailerYear <- as.factor(density_mergefee$RetailerYear)
-write.csv(density_mergefee, "D:\\Purdue\\research\\lmer\\density_mergefee_lmer_mile.csv", row.names = FALSE)
+write.csv(density_mergefee, "density_mergefee_lmer_mile.csv", row.names = FALSE)
 

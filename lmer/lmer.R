@@ -298,8 +298,6 @@ lrtest
 
 
 
-
-
 did_ethnicity <- lmer(RetailerCount_density ~ year + citylicense + pharmacyban + Total_RacialMinority +
                    Bachelor_higher_1824 + Bachelor_higher_25 + 
                    Percent.below.poverty.level + (1 | City) +
